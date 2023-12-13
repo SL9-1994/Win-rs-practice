@@ -7,7 +7,7 @@ use windows::Win32::Graphics::Gdi::{
     AlphaBlend, BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, CreateSolidBrush, DeleteDC,
     DeleteObject, GetDC, PatBlt, PlgBlt, SelectObject, BLENDFUNCTION, HBITMAP, PATINVERT, SRCCOPY,
 };
-// use windows::Win32::System::Diagnostics::Debug::{Beep, MessageBeep};
+use windows::Win32::System::Diagnostics::Debug::{Beep, MessageBeep};
 use windows::Win32::UI::WindowsAndMessaging::*;
 
 fn main() {
@@ -45,7 +45,7 @@ fn main() {
                 POINT { x: 0, y: 0 },
                 POINT { x: 0, y: 0 },
             ];
-            // let mut rng = rand::thread_rng();
+            let mut rng = rand::thread_rng();
             let hwnd = GetDesktopWindow();
             let hdc = GetDC(hwnd);
             let rect = RECT {
@@ -59,12 +59,38 @@ fn main() {
             // let right = left + GetSystemMetrics(SM_CXVIRTUALSCREEN);
             // let bottom = top + GetSystemMetrics(SM_CYVIRTUALSCREEN);
 
-            // 回転トンネルエフェクト
-            // 各要素に値を設定
+            // 色反転＆回転トンネルエフェクト
+            let mhdc = CreateCompatibleDC(hdc);
+            let hbit = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
+            let holdbit = SelectObject(mhdc, hbit);
+            BitBlt(mhdc, 0, 0, rect.right, rect.bottom, hdc, 0, 0, SRCCOPY).unwrap();
+            AlphaBlend(
+                hdc,
+                rng.gen_range(-4..4),
+                rng.gen_range(-4..4),
+                rect.right,
+                rect.bottom,
+                mhdc,
+                0,
+                0,
+                rect.right,
+                rect.bottom,
+                BLENDFUNCTION {
+                    BlendOp: 0,
+                    BlendFlags: 0,
+                    SourceConstantAlpha: 70,
+                    AlphaFormat: 0,
+                },
+            );
+
+            let color = colors.choose(&mut rng).unwrap();
+            let brush = CreateSolidBrush(COLORREF((*color).try_into().unwrap()));
+            SelectObject(hdc, brush);
+            PatBlt(hdc, rect.left, rect.top, rect.right, rect.bottom, PATINVERT);
             lppoint[0].x = (rect.left + 50) + 0;
             lppoint[0].y = (rect.top - 50) + 0;
             lppoint[1].x = (rect.right + 50) + 0;
-            lppoint[1].y = (rect.bottom + 50) + 0;
+            lppoint[1].y = (rect.top + 50) + 0;
             lppoint[2].x = (rect.left - 50) + 0;
             lppoint[2].y = (rect.bottom - 50) + 0;
 
@@ -80,8 +106,37 @@ fn main() {
                 0,
                 0,
             );
+            SelectObject(mhdc, holdbit);
+            DeleteObject(holdbit);
+            DeleteObject(hbit);
+            DeleteDC(mhdc);
+            DeleteObject(brush); // ブラシを削除
             DeleteDC(hdc);
-            sleep(Duration::from_millis(50));
+            sleep(Duration::from_millis(300));
+
+            // 回転トンネルエフェクト
+            // 各要素に値を設定
+            // lppoint[0].x = (rect.left + 50) + 0;
+            // lppoint[0].y = (rect.top - 50) + 0;
+            // lppoint[1].x = (rect.right + 50) + 0;
+            // lppoint[1].y = (rect.top + 50) + 0;
+            // lppoint[2].x = (rect.left - 50) + 0;
+            // lppoint[2].y = (rect.bottom - 50) + 0;
+
+            // PlgBlt(
+            //     hdc,
+            //     &lppoint,
+            //     hdc,
+            //     rect.left - 20,
+            //     rect.top - 20,
+            //     (rect.right - rect.left) + 40,
+            //     (rect.bottom - rect.top) + 40,
+            //     None,
+            //     0,
+            //     0,
+            // );
+            // DeleteDC(hdc);
+            // sleep(Duration::from_millis(50));
 
             // ブラーをかける
             // let mhdc = CreateCompatibleDC(hdc);
@@ -117,7 +172,7 @@ fn main() {
             // let color = colors.choose(&mut rng).unwrap();
             // let brush = CreateSolidBrush(COLORREF((*color).try_into().unwrap()));
             // SelectObject(hdc, brush);
-            // // MessageBeep(MESSAGEBOX_STYLE(0)).unwrap();
+            // MessageBeep(MESSAGEBOX_STYLE(0)).unwrap();
             // PatBlt(hdc, rect.left, rect.top, rect.right, rect.bottom, PATINVERT);
             // DeleteObject(brush); // ブラシを削除
             // DeleteDC(hdc); // デバイスコンテキストを削除
